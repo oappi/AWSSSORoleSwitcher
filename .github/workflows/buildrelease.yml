@@ -1,0 +1,149 @@
+name: Release by version tag
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+jobs:
+  cache-build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set tag env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Install go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+          cache: true
+      - name: Install Go & Fyne (GUI framework) dependecies
+        run:  sudo apt-get update && sudo apt-get install -y golang gcc libgl1-mesa-dev xorg-dev
+      - name: Build
+        run: go build --ldflags "-X 'main.version=${{ env.RELEASE_VERSION }}'" .
+        env:
+          GOOS: linux
+          GOARCH: amd64     
+      - name: Rename For release
+        run: cp awsssoroleswitcher  awsssoroleswitcherLinuxX64
+      - name: show files
+        run: ls
+      - uses: actions/cache@v3
+        id: restore-build
+        with:
+          path: ./awsssoroleswitcherLinuxX64
+          key: ${{ github.sha }}-linux
+  cache-build-Windows:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+          cache: true
+      - name: Build
+        run: go build --ldflags "-X 'main.version=${{ env.RELEASE_VERSION }}'" .
+        env:
+          GOOS: windows
+          GOARCH: amd64     
+      - name: list files
+        run: dir
+      - name: Rename For release
+        run: ren awsssoroleswitcher.exe  awsssoroleswitcherWindowsX64.exe
+      - name: Upload Binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: WindowsBinary
+          path: awsssoroleswitcherWindowsX64.exe
+      - uses: actions/cache@v3
+        id: restore-build
+        with:
+          path: awsssoroleswitcherWindowsX64
+          key: ${{ github.sha }}-windows
+
+  cache-build-mac-ARM:
+    runs-on: macos-12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21.x'
+          cache: true
+      - name: Build
+        run: go build --ldflags "-X 'main.version=${{ env.RELEASE_VERSION }}'" .
+        env:
+          CGO_ENABLED: 1
+          GOOS: darwin
+          GOARCH: arm64
+      - name: Rename For release
+        run: cp awsssoroleswitcher  awsssoroleswitcherMacARM64
+      - uses: actions/cache@v3
+        id: restore-build
+        with:
+          path: ./awsssoroleswitcherMacARM64
+          key: ${{ github.sha }}-mac-arm
+  cache-build-mac-X64:
+    runs-on: macos-12
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    - name: Install go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21.x'
+        cache: true
+    - name: Build
+      run: go build --ldflags "-X 'main.version=${{ env.RELEASE_VERSION }}'" .
+      env:
+        CGO_ENABLED: 1
+        GOOS: darwin
+        GOARCH: amd64
+    - name: Rename For release
+      run: cp awsssoroleswitcher  awsssoroleswitcherMacX64
+    - uses: actions/cache@v3
+      id: restore-build
+      with:
+        path: ./awsssoroleswitcherMacX64
+        key: ${{ github.sha }}-mac-X64
+  cache-use-build:
+    name: Retrive builds from cache and release
+    runs-on: ubuntu-latest
+    needs: [cache-build-linux,cache-build-mac-ARM,cache-build-mac-X64,cache-build-Windows ]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/cache@v3
+        id: restore-build-linux
+        with:
+          path: ./awsssoroleswitcherLinuxX64
+          key: ${{ github.sha }}-linux
+      - name: macARM-cache-fetch
+        uses: actions/cache@v3  
+        id: restore-build-Mac-ARM
+        with:
+          path: ./awsssoroleswitcherMacARM64
+          key: ${{ github.sha }}-mac-arm
+      - name: macX64-cache-fetch
+        uses: actions/cache@v3  
+        id: restore-build-mac-X64
+        with:
+          path: ./awsssoroleswitcherMacX64
+          key: ${{ github.sha }}-mac-X64
+      - name: Download WindowsBinary
+        uses: actions/download-artifact@v4
+        with:
+              name: WindowsBinary
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            awsssoroleswitcherLinuxX64
+            awsssoroleswitcherMacARM64
+            awsssoroleswitcherMacX64
+            awsssoroleswitcherWindowsX64.exe

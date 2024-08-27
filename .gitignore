@@ -1,0 +1,11 @@
+#workfolder files
+go.work
+go.work.sum
+
+# env file
+.env
+
+#binary
+awsssoroleswitcher
+awsssoroleswitcher.exe
+*debug*
