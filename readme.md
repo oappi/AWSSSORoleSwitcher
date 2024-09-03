@@ -11,7 +11,7 @@ Note that AWSSSORoleSwitcher has no association with Amazon Web Services or Amaz
 AWS identity center's app for switching is clumsy to work with, especially when multiple accounts need to be opened. This tool will allow you to easily login to multiple AWS accounts with different browser profies. Default CLI profile is also set to account you have choosen
 
 ## Requirments for this app
-* AWS CLI
+* AWS CLI and you need to configure something to credential file (AWS configure command) as Roleswitcher overwrites default profile each time account is selected
 * Linux/Mac/Windows
 * Any browser should be fine, preferably one that allows to have multiple profiles (ie chrome,firefox)
 
