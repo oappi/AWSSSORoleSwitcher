@@ -45,7 +45,7 @@ jobs:
           go-version: '1.21.x'
           cache: true
       - name: Build
-        run: go build --ldflags "-X 'main.version=${{ env.RELEASE_VERSION }}'" .
+        run: go build --ldflags "-H=windowsgui -X 'main.version=${{ env.RELEASE_VERSION }}'" . 
         env:
           GOOS: windows
           GOARCH: amd64     

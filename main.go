@@ -230,7 +230,7 @@ func replaceEmptyInputWithSavedValue(saved string, input string) string {
 // MARK:Dumpkeys
 func showdumpKeys(a fyne.App) {
 	win := a.NewWindow("Dumps all Account keys to credential file")
-	infoLabel := widget.NewLabel("Dumps every AWS accounts keys to credential file with 1 hour timeout" +
+	infoLabel := widget.NewLabel("Dumps every AWS accounts keys to credential file" +
 		"\nNote that you should only use this when needed.")
 
 	textField := container.NewGridWithColumns(1, infoLabel)
