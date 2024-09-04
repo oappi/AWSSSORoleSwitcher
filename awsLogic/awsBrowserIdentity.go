@@ -3,7 +3,7 @@ package awsLogic
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"os/exec"
@@ -41,7 +41,7 @@ func LoginBrowser(selectedAccountInfo string, sessionInfo sharedStructs.SessionI
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return err
 	}
@@ -59,7 +59,7 @@ func LoginBrowser(selectedAccountInfo string, sessionInfo sharedStructs.SessionI
 	if !ok {
 		fmt.Errorf("Expected a response with SigninToken")
 	}
-	fullbrowserURL := GetSignInURL("eu-west-1", signinToken)
+	fullbrowserURL := GetSignInURL(region, signinToken)
 	switch runtime.GOOS {
 	case "linux":
 		err = exec.Command("xdg-open", fullbrowserURL).Start()

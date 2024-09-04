@@ -27,19 +27,6 @@ func GetAWSSSOSettings(AWSFolderlocation string) (sharedStructs.SSOSessionSettin
 	return settingObject, nil
 }
 
-/*
-func fetchCredentials(ssoSettings sharedStructs.SSOSettingsObject, accountid, accountRole string) (*sso.GetRoleCredentialsOutput, error) {
-	credentials, fetchErr := ssoSettings.SsoClient.GetRoleCredentials(context.TODO(), &sso.GetRoleCredentialsInput{
-		AccessToken: ssoSettings.SSOAccessToken,
-		AccountId:   aws.String(accountid),
-		RoleName:    aws.String(accountRole),
-	})
-	if fetchErr != nil {
-		return credentials, fetchErr
-	}
-	return credentials, nil
-}*/
-
 func DumpKeysToCredentialFile(AWSFolderlocation string, accountInfo []sharedStructs.AccountObject, region *string) error {
 	cfg, err := ini.Load(AWSFolderlocation + "credentials")
 	if err != nil {
@@ -75,11 +62,22 @@ func EnrichAccountNameFromAccountOverrides(AWSFolderlocation string, ssoSettings
 		accountSection, accountSectionReaderr := accountOverrides.GetSection(*account.Id)
 		if accountSectionReaderr == nil {
 			accountName, accountNameReadError := accountSection.GetKey("AccountName")
-			var accountnameString = accountName.String()
-			if accountNameReadError == nil {
-				updatedAccount := sharedStructs.AccountIdNameRole{Id: account.Id, Role: account.Role, Name: &accountnameString}
-				updatedAccounts = append(updatedAccounts, updatedAccount)
+			accountRole, accountRoleRedError := accountSection.GetKey("AccountRole")
+
+			if accountNameReadError == nil && accountRoleRedError == nil {
+				var accountnameString = accountName.String()
+				var accountRoleString = accountRole.String()
+				if *account.Role == accountRoleString {
+					//case where we were able to read both values and override definition has same role for given account
+					var overriden = true
+					updatedAccount := sharedStructs.AccountIdNameRole{Id: account.Id, Role: account.Role, Name: &accountnameString, Overriden: &overriden}
+					updatedAccounts = append(updatedAccounts, updatedAccount)
+				} else {
+					// case with multiple roles on same account
+					updatedAccounts = append(updatedAccounts, account)
+				}
 			} else {
+				//case where one of the values failed to be read so we wont override value
 				updatedAccounts = append(updatedAccounts, account)
 			}
 		} else {

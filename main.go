@@ -13,7 +13,6 @@ import (
 	"fyne.io/fyne/v2/cmd/fyne_settings/settings"
 	"fyne.io/fyne/v2/container"
 	"fyne.io/fyne/v2/widget"
-	"github.com/aws/aws-sdk-go-v2/service/sso"
 	idp "github.com/oappi/awsssoroleswitcher/awsLogic"
 	creds "github.com/oappi/awsssoroleswitcher/credentialFileLogic"
 	"github.com/oappi/awsssoroleswitcher/interfaces"
@@ -112,13 +111,6 @@ func main() {
 
 		}
 	}
-	/*timerSelectEntry.OnChanged = func(input string) {
-
-		_, match := filteredCustomListForSelect(&input, timerOptions)
-		if match {
-			selectedSessionTime = input
-		}
-	}*/
 	reconnectButton := widget.NewButton("Reconnect", func() {
 		connectError := ssoConnectAccount(SettingsObject.SsoClient, SettingsObject.SSOAccessToken, accountSelectEntry.Text, localWriter)
 		if connectError != nil {
@@ -135,12 +127,8 @@ func main() {
 	acclabelOpenBrowser := container.NewVSplit(accountName, openBrowserButton)
 	bottomComponents := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
 	searchselect := container.NewVSplit(accountSelectEntry, bottomComponents)
-	/*timeselector := container.NewVSplit(timerSelectEntry, searchselect)
-	timeselector.Offset = 0.1
-	*/
 	searchselect.Offset = 0.1
 
-	//searchselect := container.NewAdaptiveGrid(1, optionSelectEntry, accountName)
 	w.SetContent(searchselect)
 	w.Resize(fyne.NewSize(240, 260))
 
@@ -237,7 +225,7 @@ func showdumpKeys(a fyne.App) {
 	infocontainer := container.NewGridWithColumns(1, textField)
 
 	dumpCredentialsButton := widget.NewButton("Dump", func() {
-		err := dumpKeys(SettingsInterface, SettingsObject, SettingsObject.SsoClient, localWriter)
+		err := dumpKeys(SettingsInterface, SettingsObject, localWriter)
 		if err != nil {
 			var errormessage = err.Error()
 			go errorPopUp(a, errormessage)
@@ -254,14 +242,14 @@ func showdumpKeys(a fyne.App) {
 	win.Close()
 }
 
-func dumpKeys(interfaceSettings interfaces.SettingsInterface, SSoSettings sharedStructs.SSOSettingsObject, ssoclient *sso.Client, writer interfaces.IniLogic) error {
+func dumpKeys(interfaceSettings interfaces.SettingsInterface, SSoSettings sharedStructs.SSOSettingsObject, writer interfaces.IniLogic) error {
 	accounts := []sharedStructs.AccountObject{}
 	region, err := interfaceSettings.GetAccountRegion()
 	if err != nil {
 		return err
 	}
 	for _, account := range *SSoSettings.Accounts {
-		accountWithCredentials, credentialFethError := fetchAccountCredentials(SSoSettings, account.Id, account.Role, account.Name)
+		accountWithCredentials, credentialFethError := fetchUniqueAccountCredentials(SSoSettings, account.Id, account.Role, account.Name, account.Overriden)
 		if credentialFethError != nil {
 			return credentialFethError
 		}

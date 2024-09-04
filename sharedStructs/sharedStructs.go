@@ -65,9 +65,10 @@ type SSOSettingsObject struct {
 }
 
 type AccountIdNameRole struct {
-	Id   *string
-	Name *string
-	Role *string
+	Id        *string
+	Name      *string
+	Role      *string
+	Overriden *bool
 }
 
 type AccountObject struct {

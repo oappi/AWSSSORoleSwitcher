@@ -1,5 +1,7 @@
 [1111111111111]
 AccountName = Testing-dev
+AccountRole = DeveloperRole
 
 [2222222222222]
 AccountName = Testing-prod
+AccountRole = AdminRole

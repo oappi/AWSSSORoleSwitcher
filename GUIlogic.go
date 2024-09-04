@@ -89,7 +89,10 @@ func OverRideSavedIfUserGivesInput(userInput string, savedInput string) string {
 	}
 }
 
-func fetchAccountCredentials(SSOSettings sharedStructs.SSOSettingsObject, accountId, accountRole, accountName *string) (sharedStructs.AccountObject, error) {
+/*
+fetchAccountCredentials is meant to return unique accountobject which means if name has not been overriden it will be in form of <AWS_provided_name>_<Role_of_the_credentials>
+*/
+func fetchUniqueAccountCredentials(SSOSettings sharedStructs.SSOSettingsObject, accountId, accountRole, accountName *string, accountNameOverriden *bool) (sharedStructs.AccountObject, error) {
 	var accountObject sharedStructs.AccountObject //object that holds also ways to assumerole to other account
 	credentials, errSSO := SSOSettings.SsoClient.GetRoleCredentials(context.TODO(), &sso.GetRoleCredentialsInput{
 		AccessToken: SSOSettings.SSOAccessToken,
@@ -99,7 +102,12 @@ func fetchAccountCredentials(SSOSettings sharedStructs.SSOSettingsObject, accoun
 	if errSSO != nil {
 		return accountObject, errSSO
 	}
+
 	accountObject.AccountName = accountName
+	if *accountNameOverriden == false {
+		var uniqueAccountName = *accountName + "_" + *accountRole
+		accountObject.AccountName = &uniqueAccountName
+	}
 	accountObject.AccountID = accountId
 	accountObject.AccessKey = credentials.RoleCredentials.AccessKeyId
 	accountObject.SecretAccessKey = credentials.RoleCredentials.SecretAccessKey
@@ -206,7 +214,8 @@ func fetchAccountlist(ssoClient *sso.Client, token *string) ([]sharedStructs.Acc
 					return accountList, roleListerr
 				}
 				for _, roleOutput := range roleListOutput.RoleList {
-					account := sharedStructs.AccountIdNameRole{Id: roleOutput.AccountId, Name: accountOutput.AccountName, Role: roleOutput.RoleName}
+					var notOverriden = false
+					account := sharedStructs.AccountIdNameRole{Id: roleOutput.AccountId, Name: accountOutput.AccountName, Role: roleOutput.RoleName, Overriden: &notOverriden}
 					accountList = append(accountList, account)
 				}
 			}
