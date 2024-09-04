@@ -37,9 +37,9 @@ Once you pick one it will automatically loginto that account and set it as your 
 If you need browser session, press Open in browser.
 
 ## Override accountnames
-You can also copy & paste from exampleconfiguration folder example file for overriding accountnames. File needs to be placed in same folder as aws credential file. This is helpful when you want to alter profile name for accout key dumps. In the  configuration file accountID id is in brackers and AccountName under it is the name you want account to have instead of the default value.
+You can also copy & paste from exampleconfiguration folder example file (note that it does not have .txt extension) for overriding accountnames. File needs to be placed in same folder as aws credential file. This is helpful when you want to alter profile name for account key dumps. In the  configuration file accountID id is in brackers and AccountName under it is the name you want account to have instead of the default value. You also have to define AccountRole as this will be used to identify unique credentials as some might have multiple roles on same account.
 
 ## Dump all profiles to credential file
-Under advanced dropdown you can find option to dump all keys to credential files. There are multiple reasons when you need to have keys in file, such as CDK pipeline deployment phase or 3rd party tool like steampipe plugin.
+Under advanced dropdown you can find option to dump all keys to credential files. There are multiple reasons when you need to have keys in file, such as CDK pipeline deployment phase or 3rd party tool like steampipe.
 
 
