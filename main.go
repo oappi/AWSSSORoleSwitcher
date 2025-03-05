@@ -123,7 +123,7 @@ func main() {
 		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface, multisessionEnabled)
 	})
 
-	clearFilter := widget.NewButton("Clear filter", func() {
+	clearFilter := widget.NewButton("Clear Filter", func() {
 		accountSelectEntry.SetText("")
 	})
 
