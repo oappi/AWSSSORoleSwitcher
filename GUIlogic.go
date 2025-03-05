@@ -278,9 +278,3 @@ func ssoConnectAccount(ssoClient *sso.Client, token *string, selectedAccountInfo
 	writer.UpdateShortTermKeys(awsSession.Accesskey, awsSession.SecretAccessKey, awsSession.Token)
 	return nil
 }
-
-/*
-func ParseSessiontime(sessionTimeOption string) (int64, error) {
-	sessionHoursString := strings.Split(sessionTimeOption, " ")[0]
-	return strconv.ParseInt(sessionHoursString, 10, 64) //converts string to int, error if failed
-}*/
