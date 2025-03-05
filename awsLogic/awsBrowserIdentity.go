@@ -6,6 +6,8 @@ import (
 	"io"
 	"log"
 	"net/http"
+
+	"net/url"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -14,7 +16,7 @@ import (
 	"github.com/oappi/awsssoroleswitcher/sharedStructs"
 )
 
-func LoginBrowser(selectedAccountInfo string, sessionInfo sharedStructs.SessionInfo, SettingsInterface interfaces.SettingsInterface) error {
+func LoginBrowser(selectedAccountInfo string, sessionInfo sharedStructs.SessionInfo, SettingsInterface interfaces.SettingsInterface, multisession bool) error {
 	region, errRegion := SettingsInterface.GetAccountRegion()
 	if errRegion != nil {
 		return errRegion
@@ -54,12 +56,16 @@ func LoginBrowser(selectedAccountInfo string, sessionInfo sharedStructs.SessionI
 	if err != nil {
 		return err
 	}
-
 	signinToken, ok := respParsed["SigninToken"]
 	if !ok {
 		fmt.Errorf("Expected a response with SigninToken")
 	}
-	fullbrowserURL := GetSignInURL(region, signinToken)
+	fullbrowserURL := ""
+	if multisession == true {
+		fullbrowserURL = GetSignInURLMultiSession(region, signinToken)
+	} else {
+		fullbrowserURL = GetSignInURL(region, signinToken)
+	}
 	switch runtime.GOOS {
 	case "linux":
 		err = exec.Command("xdg-open", fullbrowserURL).Start()
@@ -88,6 +94,14 @@ func LoginBrowser(selectedAccountInfo string, sessionInfo sharedStructs.SessionI
 
 func GetSignInURL(region string, token string) string {
 	var fullbrowserURL = "https://us-east-1.signin.aws.amazon.com/oauth?Action=logout&redirect_uri=https%3A%2F%2F" + region + ".signin.aws.amazon.com%2Ffederation%3FAction%3Dlogin%26Destination%3Dhttps%253A%252F%252F" + region + ".console.aws.amazon.com%26SigninToken%3D" + token
+	return fullbrowserURL
+}
+
+func GetSignInURLMultiSession(region string, token string) string {
+	destination := fmt.Sprintf("https://%s.console.aws.amazon.com/", region)
+	encodedDestination := url.QueryEscape(destination)
+	fullbrowserURL := fmt.Sprintf("https://%s.signin.aws.amazon.com/federation?Action=login&Destination=%s&SigninToken=%s",
+		region, encodedDestination, token)
 	return fullbrowserURL
 }
 

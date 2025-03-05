@@ -19,10 +19,12 @@ func GetAWSSSOSettings(AWSFolderlocation string) (sharedStructs.SSOSessionSettin
 	SSORegion := cfg.Section("localSettings").Key("SSORegion").String()
 	AccountRegion := cfg.Section("localSettings").Key("AccountRegion").String()
 	alias := cfg.Section("localSettings").Key("Alias").String()
+	multiSession := cfg.Section("localSettings").Key("MultiSession").String()
 	settingObject.SsoURL = ssoURL
 	settingObject.SSORegion = SSORegion
 	settingObject.AccountRegion = AccountRegion
 	settingObject.Alias = alias
+	settingObject.MultiSession = multiSession
 
 	return settingObject, nil
 }
@@ -110,6 +112,7 @@ func SetAWSSSOSettings(AWSFolderlocation string, SSOSettings sharedStructs.SSOSe
 	cfg.Section("localSettings").Key("SSORegion").SetValue(SSOSettings.SSORegion)
 	cfg.Section("localSettings").Key("AccountRegion").SetValue(SSOSettings.AccountRegion)
 	cfg.Section("localSettings").Key("Alias").SetValue(SSOSettings.Alias)
+	cfg.Section("localSettings").Key("MultiSession").SetValue(SSOSettings.MultiSession)
 	return saveWithReducedPriviliges(AWSFolderlocation+"awsssoroleswitcher", cfg)
 }
 

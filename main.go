@@ -32,6 +32,7 @@ var SettingsInterface interfaces.SettingsInterface
 var SettingsObject sharedStructs.SSOSettingsObject //contains ssoclient and token to fetch credentials
 var selectedSessionTime = "1 hour session"
 var placeholderAccountName = "not set"
+var multisessionEnabled = false
 
 func main() {
 	a := app.NewWithID("io.fyne.oappi.AWSRoleSwitcher")
@@ -119,7 +120,7 @@ func main() {
 
 	})
 	openBrowserButton := widget.NewButton("Open in Browser", func() {
-		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface)
+		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface, multisessionEnabled)
 	})
 
 	reconnectButton.Importance = 0
@@ -146,7 +147,7 @@ func showInfo(a fyne.App) {
 }
 
 func showAWSSSOSettings(a fyne.App) {
-	win := a.NewWindow("Local Connect Settings")
+	win := a.NewWindow("SSO Connect Settings")
 	SSOURLLabel := widget.NewLabel("AWS-SSO URL")
 	SSOURLText := widget.NewEntry()
 	ssoRegionLabel := widget.NewLabel("SSO Region")
@@ -155,6 +156,10 @@ func showAWSSSOSettings(a fyne.App) {
 	accountRegionText := widget.NewEntry()
 	aliasLabel := widget.NewLabel("Alias")
 	aliasText := widget.NewEntry()
+	multiSessionLabel := widget.NewLabel("Multi-session")
+	multiSessioncheck := widget.NewCheck("AWS Console has multi-session enabled", func(value bool) {
+		multisessionEnabled = value
+	})
 
 	ssoSettings, fetcherror := localWriter.GetSSOSettings()
 	if fetcherror != nil {
@@ -165,10 +170,25 @@ func showAWSSSOSettings(a fyne.App) {
 		ssoRegionText.SetPlaceHolder(ssoSettings.SSORegion)
 		accountRegionText.SetPlaceHolder(ssoSettings.AccountRegion)
 		aliasText.SetPlaceHolder(ssoSettings.Alias)
+		if ssoSettings.MultiSession == "true" {
+			multiSessioncheck.SetChecked(true)
+			multisessionEnabled = true
+		} else {
+			multiSessioncheck.SetChecked(false)
+			multisessionEnabled = false
+		}
+
+		if ssoSettings.MultiSession == "true" {
+			multiSessioncheck.SetChecked(true)
+			multisessionEnabled = true
+		} else {
+			multiSessioncheck.SetChecked(false)
+			multisessionEnabled = false
+		}
 	}
 
-	labels := container.NewGridWithColumns(1, SSOURLLabel, ssoRegionLabel, accountRegionLabel, aliasLabel)
-	textFields := container.NewGridWithColumns(1, SSOURLText, ssoRegionText, accountRegionText, aliasText)
+	labels := container.NewGridWithColumns(1, SSOURLLabel, ssoRegionLabel, accountRegionLabel, aliasLabel, multiSessionLabel)
+	textFields := container.NewGridWithColumns(1, SSOURLText, ssoRegionText, accountRegionText, aliasText, multiSessioncheck)
 	settingscontainer := container.NewGridWithColumns(2, labels, textFields)
 
 	applySettingsButton := widget.NewButton("Connect", func() {
@@ -176,11 +196,27 @@ func showAWSSSOSettings(a fyne.App) {
 		SSoRegionOption := OverRideSavedIfUserGivesInput(ssoRegionText.Text, ssoSettings.SSORegion)
 		AccountRegionOption := OverRideSavedIfUserGivesInput(accountRegionText.Text, ssoSettings.AccountRegion)
 		UserAliasOption := OverRideSavedIfUserGivesInput(aliasText.Text, ssoSettings.Alias)
+		UserMultiSession := OverRideSavedIfUserGivesInput("false", ssoSettings.MultiSession)
+		if multiSessioncheck.Checked {
+			UserMultiSession = OverRideSavedIfUserGivesInput("true", ssoSettings.MultiSession)
+		} else {
+			UserMultiSession = OverRideSavedIfUserGivesInput("false", ssoSettings.MultiSession)
+		}
+
 		var SSOSettings sharedStructs.SSOSessionSettings
 		SSOSettings.SsoURL = SSOURLOption
 		SSOSettings.SSORegion = SSoRegionOption
 		SSOSettings.AccountRegion = AccountRegionOption
 		SSOSettings.Alias = UserAliasOption
+		SSOSettings.MultiSession = UserMultiSession
+		var multiSessionStringBoolean = "false"
+		if multisessionEnabled {
+			multiSessionStringBoolean = "true"
+		} else {
+			multiSessionStringBoolean = "false"
+
+		}
+		SSOSettings.MultiSession = multiSessionStringBoolean
 
 		SettingsInterface = interfaces.AWSSSOSettings{Lock: lock, SSOURL: SSOURLOption, Region: AccountRegionOption, SSORegion: SSoRegionOption, UserAlias: UserAliasOption, AWSFolderLocation: creds.GetAWSFolderStripError(), LocalWriter: localWriter}
 		err := updateSettings(SettingsInterface)
