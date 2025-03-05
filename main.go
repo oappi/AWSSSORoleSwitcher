@@ -124,7 +124,7 @@ func main() {
 	})
 
 	clearFilter := widget.NewButton("Clear filter", func() {
-		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface, multisessionEnabled)
+		accountSelectEntry.SetText("")
 	})
 
 	reconnectButton.Importance = 0
@@ -133,8 +133,9 @@ func main() {
 	bottomComponents2 := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
 	bottomComponents := container.NewVSplit(clearFilter, bottomComponents2)
 	searchselect := container.NewVSplit(accountSelectEntry, bottomComponents)
-	searchselect.Offset = 0.1
 
+	searchselect.Offset = 0.1
+	bottomComponents.Offset = 0.1
 	w.SetContent(searchselect)
 	w.Resize(fyne.NewSize(240, 260))
 
