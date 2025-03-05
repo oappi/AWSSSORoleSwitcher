@@ -1,4 +1,4 @@
-# AWSRoleSwitcher
+# AWSSSORoleSwitcher
 
 ![Image of AWSSSORoleSwitcher](images/awsssoroleswitch.png)
 
