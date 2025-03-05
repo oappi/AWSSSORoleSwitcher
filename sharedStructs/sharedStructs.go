@@ -22,6 +22,7 @@ type SSOSessionSettings struct {
 	AccountRegion  string
 	SSORegion      string
 	Alias          string
+	MultiSession   string
 }
 
 /*
