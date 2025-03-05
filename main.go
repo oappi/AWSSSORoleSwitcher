@@ -123,10 +123,15 @@ func main() {
 		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface, multisessionEnabled)
 	})
 
+	clearFilter := widget.NewButton("Clear filter", func() {
+		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface, multisessionEnabled)
+	})
+
 	reconnectButton.Importance = 0
 	//openBrowserButton
 	acclabelOpenBrowser := container.NewVSplit(accountName, openBrowserButton)
-	bottomComponents := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
+	bottomComponents2 := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
+	bottomComponents := container.NewVSplit(clearFilter, bottomComponents2)
 	searchselect := container.NewVSplit(accountSelectEntry, bottomComponents)
 	searchselect.Offset = 0.1
 
@@ -157,8 +162,9 @@ func showAWSSSOSettings(a fyne.App) {
 	aliasLabel := widget.NewLabel("Alias")
 	aliasText := widget.NewEntry()
 	multiSessionLabel := widget.NewLabel("Multi-session")
+	var multisessionLocalValue bool = false
 	multiSessioncheck := widget.NewCheck("AWS Console has multi-session enabled", func(value bool) {
-		multisessionEnabled = value
+		multisessionLocalValue = value
 	})
 
 	ssoSettings, fetcherror := localWriter.GetSSOSettings()
@@ -172,18 +178,18 @@ func showAWSSSOSettings(a fyne.App) {
 		aliasText.SetPlaceHolder(ssoSettings.Alias)
 		if ssoSettings.MultiSession == "true" {
 			multiSessioncheck.SetChecked(true)
-			multisessionEnabled = true
+			multisessionLocalValue = true
 		} else {
 			multiSessioncheck.SetChecked(false)
-			multisessionEnabled = false
+			multisessionLocalValue = false
 		}
 
 		if ssoSettings.MultiSession == "true" {
 			multiSessioncheck.SetChecked(true)
-			multisessionEnabled = true
+			multisessionLocalValue = true
 		} else {
 			multiSessioncheck.SetChecked(false)
-			multisessionEnabled = false
+			multisessionLocalValue = false
 		}
 	}
 
@@ -210,7 +216,7 @@ func showAWSSSOSettings(a fyne.App) {
 		SSOSettings.Alias = UserAliasOption
 		SSOSettings.MultiSession = UserMultiSession
 		var multiSessionStringBoolean = "false"
-		if multisessionEnabled {
+		if multisessionLocalValue {
 			multiSessionStringBoolean = "true"
 		} else {
 			multiSessionStringBoolean = "false"
@@ -225,6 +231,7 @@ func showAWSSSOSettings(a fyne.App) {
 
 		} else {
 			localWriter.SetSSOSettings(SSOSettings)
+			multisessionEnabled = multisessionLocalValue
 			win.Close()
 		}
 	})
