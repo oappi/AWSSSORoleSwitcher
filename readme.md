@@ -13,7 +13,7 @@ AWS identity center's app for switching is clumsy to work with, especially when 
 ## Requirments for this app
 * AWS CLI and you need to configure something to credential file (AWS configure command) as Roleswitcher overwrites default profile each time account is selected
 * Linux/Mac/Windows
-* Any browser should be fine, preferably one that allows to have multiple profiles (ie chrome,firefox)
+* Any browser should be fine, preferably one that allows to have multiple profiles (E.g. chrome,firefox)
 
 ## Installation
 
