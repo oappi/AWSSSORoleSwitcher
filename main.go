@@ -31,7 +31,7 @@ var gOptionSelection *widget.SelectEntry
 var SettingsInterface interfaces.SettingsInterface
 var SettingsObject sharedStructs.SSOSettingsObject //contains ssoclient and token to fetch credentials
 var selectedSessionTime = "1 hour session"
-var placeholderAccountName = "not set"
+var placeholderAccountName = "no account selected"
 var multisessionEnabled = false
 
 func main() {
