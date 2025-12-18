@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"fyne.io/fyne/v2/widget"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sso"
@@ -121,7 +122,7 @@ func GetAWSConfig(region string) aws.Config {
 	return cfg
 }
 
-func getAccessToken(settings interfaces.SettingsInterface, cfg aws.Config) (*string, error) {
+func getAccessToken(settings interfaces.SettingsInterface, cfg aws.Config, UIproofcodeTextLabel *widget.Label) (*string, error) {
 	var SSOSettings *string
 	oidcClient := ssooidc.NewFromConfig(cfg)
 	register, errR := oidcClient.RegisterClient(context.TODO(), &ssooidc.RegisterClientInput{
@@ -137,6 +138,8 @@ func getAccessToken(settings interfaces.SettingsInterface, cfg aws.Config) (*str
 		ClientSecret: register.ClientSecret,
 		StartUrl:     aws.String(settings.GetSSOURL()),
 	})
+	UIproofcodeTextLabel.SetText(*deviceAuth.UserCode)
+
 	if errDA != nil {
 		return SSOSettings, errors.New("Issue registering connection. Check SSO-URL")
 	}
@@ -224,11 +227,11 @@ func fetchAccountlist(ssoClient *sso.Client, token *string) ([]sharedStructs.Acc
 	return accountList, nil
 }
 
-func updateSettings(SettingsInterface interfaces.SettingsInterface) error {
+func updateSettings(SettingsInterface interfaces.SettingsInterface, UIproofcodeTextLabel *widget.Label) error {
 	ssoRegion, _ := SettingsInterface.GetSSORegion()
 	aWSConfig := GetAWSConfig(ssoRegion)
 	ssoClient := sso.NewFromConfig(aWSConfig)
-	token, tokenErr := getAccessToken(SettingsInterface, aWSConfig)
+	token, tokenErr := getAccessToken(SettingsInterface, aWSConfig, UIproofcodeTextLabel)
 	if tokenErr != nil {
 		return tokenErr
 	}
