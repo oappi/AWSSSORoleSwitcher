@@ -83,7 +83,7 @@ func main() {
 	accountName := widget.NewLabel(placeholderAccountName)
 	accountName.TextStyle.Bold = true
 	accountName.TextStyle.Italic = true
-	accountName.Alignment = fyne.TextAlignLeading
+	accountName.Alignment = fyne.TextAlignCenter
 
 	//reconnectButton.Importance = 1
 	intro := widget.NewLabel("An introduction would probably go\nhere, as well as a")
@@ -112,13 +112,7 @@ func main() {
 
 		}
 	}
-	reconnectButton := widget.NewButton("Reconnect", func() {
-		connectError := ssoConnectAccount(SettingsObject.SsoClient, SettingsObject.SSOAccessToken, accountSelectEntry.Text, localWriter)
-		if connectError != nil {
-			popError(a, connectError)
-		}
 
-	})
 	openBrowserButton := widget.NewButton("Open in Browser", func() {
 		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface, multisessionEnabled)
 	})
@@ -127,17 +121,16 @@ func main() {
 		accountSelectEntry.SetText("")
 	})
 
-	reconnectButton.Importance = 0
 	//openBrowserButton
 	acclabelOpenBrowser := container.NewVSplit(accountName, openBrowserButton)
-	bottomComponents2 := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
-	bottomComponents := container.NewVSplit(clearFilter, bottomComponents2)
+	//bottomComponents2 := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
+	bottomComponents := container.NewVSplit(clearFilter, acclabelOpenBrowser)
 	searchselect := container.NewVSplit(accountSelectEntry, bottomComponents)
-
+	acclabelOpenBrowser.Offset = 0.8
 	searchselect.Offset = 0.1
 	bottomComponents.Offset = 0.1
 	w.SetContent(searchselect)
-	w.Resize(fyne.NewSize(240, 260))
+	w.Resize(fyne.NewSize(240, 100))
 
 	w.ShowAndRun()
 }
