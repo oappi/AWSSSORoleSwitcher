@@ -31,7 +31,7 @@ var gOptionSelection *widget.SelectEntry
 var SettingsInterface interfaces.SettingsInterface
 var SettingsObject sharedStructs.SSOSettingsObject //contains ssoclient and token to fetch credentials
 var selectedSessionTime = "1 hour session"
-var placeholderAccountName = "not set"
+var placeholderAccountName = "no account selected"
 var multisessionEnabled = false
 
 func main() {
@@ -83,7 +83,7 @@ func main() {
 	accountName := widget.NewLabel(placeholderAccountName)
 	accountName.TextStyle.Bold = true
 	accountName.TextStyle.Italic = true
-	accountName.Alignment = fyne.TextAlignLeading
+	accountName.Alignment = fyne.TextAlignCenter
 
 	//reconnectButton.Importance = 1
 	intro := widget.NewLabel("An introduction would probably go\nhere, as well as a")
@@ -112,13 +112,7 @@ func main() {
 
 		}
 	}
-	reconnectButton := widget.NewButton("Reconnect", func() {
-		connectError := ssoConnectAccount(SettingsObject.SsoClient, SettingsObject.SSOAccessToken, accountSelectEntry.Text, localWriter)
-		if connectError != nil {
-			popError(a, connectError)
-		}
 
-	})
 	openBrowserButton := widget.NewButton("Open in Browser", func() {
 		idp.LoginBrowser(accountName.Text, awsSession, SettingsInterface, multisessionEnabled)
 	})
@@ -127,17 +121,16 @@ func main() {
 		accountSelectEntry.SetText("")
 	})
 
-	reconnectButton.Importance = 0
 	//openBrowserButton
 	acclabelOpenBrowser := container.NewVSplit(accountName, openBrowserButton)
-	bottomComponents2 := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
-	bottomComponents := container.NewVSplit(clearFilter, bottomComponents2)
+	//bottomComponents2 := container.NewVSplit(acclabelOpenBrowser, reconnectButton)
+	bottomComponents := container.NewVSplit(clearFilter, acclabelOpenBrowser)
 	searchselect := container.NewVSplit(accountSelectEntry, bottomComponents)
-
+	acclabelOpenBrowser.Offset = 0.8
 	searchselect.Offset = 0.1
 	bottomComponents.Offset = 0.1
 	w.SetContent(searchselect)
-	w.Resize(fyne.NewSize(240, 260))
+	w.Resize(fyne.NewSize(240, 100))
 
 	w.ShowAndRun()
 }
@@ -167,7 +160,10 @@ func showAWSSSOSettings(a fyne.App) {
 	multiSessioncheck := widget.NewCheck("AWS Console has multi-session enabled", func(value bool) {
 		multisessionLocalValue = value
 	})
-
+	//last element
+	proofCodeLabel := widget.NewLabel("Confirmation code")
+	proofCodeText := widget.NewLabel("Shown once connected")
+	//last element end
 	ssoSettings, fetcherror := localWriter.GetSSOSettings()
 	if fetcherror != nil {
 		//customOpenError := errors.New("Could not read old settings. This is normal first time\n")
@@ -194,8 +190,8 @@ func showAWSSSOSettings(a fyne.App) {
 		}
 	}
 
-	labels := container.NewGridWithColumns(1, SSOURLLabel, ssoRegionLabel, accountRegionLabel, aliasLabel, multiSessionLabel)
-	textFields := container.NewGridWithColumns(1, SSOURLText, ssoRegionText, accountRegionText, aliasText, multiSessioncheck)
+	labels := container.NewGridWithColumns(1, SSOURLLabel, ssoRegionLabel, accountRegionLabel, aliasLabel, multiSessionLabel, proofCodeLabel)
+	textFields := container.NewGridWithColumns(1, SSOURLText, ssoRegionText, accountRegionText, aliasText, multiSessioncheck, proofCodeText)
 	settingscontainer := container.NewGridWithColumns(2, labels, textFields)
 
 	applySettingsButton := widget.NewButton("Connect", func() {
@@ -226,7 +222,7 @@ func showAWSSSOSettings(a fyne.App) {
 		SSOSettings.MultiSession = multiSessionStringBoolean
 
 		SettingsInterface = interfaces.AWSSSOSettings{Lock: lock, SSOURL: SSOURLOption, Region: AccountRegionOption, SSORegion: SSoRegionOption, UserAlias: UserAliasOption, AWSFolderLocation: creds.GetAWSFolderStripError(), LocalWriter: localWriter}
-		err := updateSettings(SettingsInterface)
+		err := updateSettings(SettingsInterface, proofCodeText)
 		if err != nil {
 			popError(a, err)
 
