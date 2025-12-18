@@ -162,8 +162,7 @@ func showAWSSSOSettings(a fyne.App) {
 	})
 	//last element
 	proofCodeLabel := widget.NewLabel("Confirmation code")
-	proofCodeText := widget.NewLabel("Code will appear once connection button has been pressed")
-
+	proofCodeText := widget.NewLabel("Shown once connected")
 	//last element end
 	ssoSettings, fetcherror := localWriter.GetSSOSettings()
 	if fetcherror != nil {
