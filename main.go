@@ -167,7 +167,11 @@ func showAWSSSOSettings(a fyne.App) {
 	multiSessioncheck := widget.NewCheck("AWS Console has multi-session enabled", func(value bool) {
 		multisessionLocalValue = value
 	})
+	//last element
+	proofCodeLabel := widget.NewLabel("Confirmation code")
+	proofCodeText := widget.NewLabel("Code will appear once connection button has been pressed")
 
+	//last element end
 	ssoSettings, fetcherror := localWriter.GetSSOSettings()
 	if fetcherror != nil {
 		//customOpenError := errors.New("Could not read old settings. This is normal first time\n")
@@ -194,8 +198,8 @@ func showAWSSSOSettings(a fyne.App) {
 		}
 	}
 
-	labels := container.NewGridWithColumns(1, SSOURLLabel, ssoRegionLabel, accountRegionLabel, aliasLabel, multiSessionLabel)
-	textFields := container.NewGridWithColumns(1, SSOURLText, ssoRegionText, accountRegionText, aliasText, multiSessioncheck)
+	labels := container.NewGridWithColumns(1, SSOURLLabel, ssoRegionLabel, accountRegionLabel, aliasLabel, multiSessionLabel, proofCodeLabel)
+	textFields := container.NewGridWithColumns(1, SSOURLText, ssoRegionText, accountRegionText, aliasText, multiSessioncheck, proofCodeText)
 	settingscontainer := container.NewGridWithColumns(2, labels, textFields)
 
 	applySettingsButton := widget.NewButton("Connect", func() {
@@ -226,7 +230,7 @@ func showAWSSSOSettings(a fyne.App) {
 		SSOSettings.MultiSession = multiSessionStringBoolean
 
 		SettingsInterface = interfaces.AWSSSOSettings{Lock: lock, SSOURL: SSOURLOption, Region: AccountRegionOption, SSORegion: SSoRegionOption, UserAlias: UserAliasOption, AWSFolderLocation: creds.GetAWSFolderStripError(), LocalWriter: localWriter}
-		err := updateSettings(SettingsInterface)
+		err := updateSettings(SettingsInterface, proofCodeText)
 		if err != nil {
 			popError(a, err)
 
