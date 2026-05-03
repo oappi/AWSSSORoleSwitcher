@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"fyne.io/fyne/v2"
 	"fyne.io/fyne/v2/widget"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
@@ -118,7 +119,7 @@ func fetchUniqueAccountCredentials(SSOSettings sharedStructs.SSOSettingsObject, 
 }
 
 func GetAWSConfig(region string) aws.Config {
-	cfg, _ := config.LoadDefaultConfig(context.TODO(), config.WithDefaultRegion(region))
+	cfg, _ := config.LoadDefaultConfig(context.TODO(), config.WithRegion(region))
 	return cfg
 }
 
@@ -128,21 +129,32 @@ func getAccessToken(settings interfaces.SettingsInterface, cfg aws.Config, UIpro
 	register, errR := oidcClient.RegisterClient(context.TODO(), &ssooidc.RegisterClientInput{
 		ClientName: aws.String("AWSSSORoleSwitcher"),
 		ClientType: aws.String("public"),
+		Scopes:     []string{"sso:account:access"},
 	})
 	if errR != nil {
-		return SSOSettings, errors.New("Issue registering connection")
+		log.Printf("RegisterClient error: %v", errR)
+		return SSOSettings, errors.New("Issue registering connection: " + errR.Error())
 	}
+
+	ssourl := aws.String(settings.GetSSOURL())
 
 	deviceAuth, errDA := oidcClient.StartDeviceAuthorization(context.TODO(), &ssooidc.StartDeviceAuthorizationInput{
 		ClientId:     register.ClientId,
 		ClientSecret: register.ClientSecret,
-		StartUrl:     aws.String(settings.GetSSOURL()),
+		StartUrl:     ssourl,
 	})
-	UIproofcodeTextLabel.SetText(*deviceAuth.UserCode)
 
 	if errDA != nil {
-		return SSOSettings, errors.New("Issue registering connection. Check SSO-URL")
+		log.Printf("StartDeviceAuthorization error: %v", errDA)
+		return SSOSettings, errors.New("Issue registering connection. Check SSO-URL: " + errDA.Error())
 	}
+
+	log.Printf("Device auth started: UserCode=%s", *deviceAuth.UserCode)
+
+	// Update UI from background thread
+	fyne.Do(func() {
+		UIproofcodeTextLabel.SetText(*deviceAuth.UserCode)
+	})
 	url := aws.ToString(deviceAuth.VerificationUriComplete)
 	errBrowser := browser.OpenURL(url)
 	if errBrowser != nil {
@@ -150,8 +162,7 @@ func getAccessToken(settings interfaces.SettingsInterface, cfg aws.Config, UIpro
 	}
 
 	var token *ssooidc.CreateTokenOutput
-	approved := false
-	for !approved {
+	for {
 		t, err := oidcClient.CreateToken(context.TODO(), &ssooidc.CreateTokenInput{
 			ClientId:     register.ClientId,
 			ClientSecret: register.ClientSecret,
@@ -159,19 +170,32 @@ func getAccessToken(settings interfaces.SettingsInterface, cfg aws.Config, UIpro
 			GrantType:    aws.String("urn:ietf:params:oauth:grant-type:device_code"),
 		})
 		if err != nil {
-			isPending := strings.Contains(err.Error(), "AuthorizationPendingException:")
-			if isPending {
+			errStr := err.Error()
+
+			// we are waiting for user to approve in browser
+			if strings.Contains(errStr, "AuthorizationPendingException") {
 				log.Println("Authorization pending...")
 				time.Sleep(time.Duration(deviceAuth.Interval) * time.Second)
 				continue
 			}
+			if strings.Contains(errStr, "SlowDownException") {
+				log.Println("Slow down...")
+				time.Sleep(time.Duration(deviceAuth.Interval+2) * time.Second)
+				continue
+			}
+			//some other error we should break loop
+			return nil, err
 		}
-		approved = true
-		token = t
-		time.Sleep(1 * time.Second)
-	}
 
-	return token.AccessToken, nil
+		if t == nil || t.AccessToken == nil || *t.AccessToken == "" {
+			return nil, errors.New("received empty token from AWS")
+
+		} else {
+			token = t
+		}
+
+		return token.AccessToken, nil
+	}
 }
 
 func getAccountInfo(SSOSettings sharedStructs.SSOSettingsObject, accountInfo sharedStructs.AccountIdNameRole) (sharedStructs.AccountObject, error) {
@@ -229,6 +253,9 @@ func fetchAccountlist(ssoClient *sso.Client, token *string) ([]sharedStructs.Acc
 
 func updateSettings(SettingsInterface interfaces.SettingsInterface, UIproofcodeTextLabel *widget.Label) error {
 	ssoRegion, _ := SettingsInterface.GetSSORegion()
+	log.Printf("Using SSO Region: %s", ssoRegion)
+	log.Printf("Using SSO URL: %s", SettingsInterface.GetSSOURL())
+
 	aWSConfig := GetAWSConfig(ssoRegion)
 	ssoClient := sso.NewFromConfig(aWSConfig)
 	token, tokenErr := getAccessToken(SettingsInterface, aWSConfig, UIproofcodeTextLabel)
