@@ -142,7 +142,6 @@ func showInfo(a fyne.App) {
 		"https://github.com/oappi/AWSSSORoleSwitcher"))
 	win.Resize(fyne.NewSize(350, 200))
 	win.Show()
-	win.Close()
 }
 
 func showAWSSSOSettings(a fyne.App) {
@@ -237,7 +236,6 @@ func showAWSSSOSettings(a fyne.App) {
 	settingsplit.Offset = 0.9
 	win.SetContent(settingsplit)
 	win.Show()
-	win.Close()
 }
 
 func hideSecret(password string) string {
@@ -279,7 +277,6 @@ func showdumpKeys(a fyne.App) {
 	win.SetContent(settingsplit)
 
 	win.Show()
-	win.Close()
 }
 
 func dumpKeys(interfaceSettings interfaces.SettingsInterface, SSoSettings sharedStructs.SSOSettingsObject, writer interfaces.IniLogic) error {
@@ -322,5 +319,4 @@ func errorPopUp(a fyne.App, message string) {
 	settingsplit.Offset = 0.9
 	win.SetContent(settingsplit)
 	win.Show()
-	win.Close()
 }
