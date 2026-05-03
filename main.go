@@ -53,7 +53,7 @@ func main() {
 	})
 
 	connectAWSSettings := fyne.NewMenuItem("Connect via AWS SSO", func() {
-		go showAWSSSOSettings(a)
+		showAWSSSOSettings(a)
 	})
 
 	advancedMenu := fyne.NewMenu("Advanced",
@@ -168,10 +168,10 @@ func showAWSSSOSettings(a fyne.App) {
 		//customOpenError := errors.New("Could not read old settings. This is normal first time\n")
 		//popError(a, customOpenError)
 	} else {
-		SSOURLText.SetPlaceHolder(ssoSettings.SsoURL)
-		ssoRegionText.SetPlaceHolder(ssoSettings.SSORegion)
-		accountRegionText.SetPlaceHolder(ssoSettings.AccountRegion)
-		aliasText.SetPlaceHolder(ssoSettings.Alias)
+		SSOURLText.SetText(ssoSettings.SsoURL)
+		ssoRegionText.SetText(ssoSettings.SSORegion)
+		accountRegionText.SetText(ssoSettings.AccountRegion)
+		aliasText.SetText(ssoSettings.Alias)
 		if ssoSettings.MultiSession == "true" {
 			multiSessioncheck.SetChecked(true)
 			multisessionLocalValue = true
@@ -194,6 +194,7 @@ func showAWSSSOSettings(a fyne.App) {
 	settingscontainer := container.NewGridWithColumns(2, labels, textFields)
 
 	applySettingsButton := widget.NewButton("Connect", func() {
+
 		SSOURLOption := OverRideSavedIfUserGivesInput(SSOURLText.Text, ssoSettings.SsoURL)
 		SSoRegionOption := OverRideSavedIfUserGivesInput(ssoRegionText.Text, ssoSettings.SSORegion)
 		AccountRegionOption := OverRideSavedIfUserGivesInput(accountRegionText.Text, ssoSettings.AccountRegion)
@@ -221,15 +222,20 @@ func showAWSSSOSettings(a fyne.App) {
 		SSOSettings.MultiSession = multiSessionStringBoolean
 
 		SettingsInterface = interfaces.AWSSSOSettings{Lock: lock, SSOURL: SSOURLOption, Region: AccountRegionOption, SSORegion: SSoRegionOption, UserAlias: UserAliasOption, AWSFolderLocation: creds.GetAWSFolderStripError(), LocalWriter: localWriter}
-		err := updateSettings(SettingsInterface, proofCodeText)
-		if err != nil {
-			popError(a, err)
 
-		} else {
-			localWriter.SetSSOSettings(SSOSettings)
-			multisessionEnabled = multisessionLocalValue
-			win.Close()
-		}
+		// Run blocking I/O in background
+		go func() {
+			err := updateSettings(SettingsInterface, proofCodeText)
+			if err != nil {
+				popError(a, err)
+			} else {
+				fyne.Do(func() {
+					localWriter.SetSSOSettings(SSOSettings)
+					multisessionEnabled = multisessionLocalValue
+					win.Close()
+				})
+			}
+		}()
 	})
 
 	settingsplit := container.NewVSplit(settingscontainer, applySettingsButton)
@@ -299,7 +305,9 @@ func dumpKeys(interfaceSettings interfaces.SettingsInterface, SSoSettings shared
 
 func popError(a fyne.App, err error) {
 	var errormessage = err.Error()
-	go errorPopUp(a, errormessage)
+	fyne.Do(func() {
+		errorPopUp(a, errormessage)
+	})
 }
 
 func errorPopUp(a fyne.App, message string) {

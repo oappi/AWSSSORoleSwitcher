@@ -48,7 +48,7 @@ func (sso AWSSSOSettings) GetToken() string {
 
 func (sso AWSSSOSettings) GetSSORegion() (string, error) {
 
-	return sso.Region, nil
+	return sso.SSORegion, nil
 }
 
 func (sso AWSSSOSettings) GetAccountRegion() (string, error) {
