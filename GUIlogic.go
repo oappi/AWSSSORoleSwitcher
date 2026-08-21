@@ -7,7 +7,9 @@ import (
 	"context"
 	"errors"
 	"log"
+	"runtime"
 	"strings"
+	"sync"
 	"time"
 
 	"fyne.io/fyne/v2"
@@ -15,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/sso"
+	ssoTypes "github.com/aws/aws-sdk-go-v2/service/sso/types"
 	"github.com/aws/aws-sdk-go-v2/service/ssooidc"
 	"github.com/oappi/awsssoroleswitcher/interfaces"
 	"github.com/oappi/awsssoroleswitcher/sharedStructs"
@@ -218,35 +221,96 @@ func getAccountInfo(SSOSettings sharedStructs.SSOSettingsObject, accountInfo sha
 
 }
 
+func fetchRolesForAccount(ssoClient *sso.Client, token *string, accountOutput ssoTypes.AccountInfo) ([]sharedStructs.AccountIdNameRole, error) {
+	rolePaginator := sso.NewListAccountRolesPaginator(ssoClient, &sso.ListAccountRolesInput{
+		AccessToken: token,
+		AccountId:   accountOutput.AccountId,
+	})
+
+	var roles []sharedStructs.AccountIdNameRole
+	for rolePaginator.HasMorePages() {
+		roleListOutput, roleListerr := rolePaginator.NextPage(context.TODO())
+		if roleListerr != nil {
+			return nil, roleListerr
+		}
+		for _, roleOutput := range roleListOutput.RoleList {
+			var notOverriden = false
+			account := sharedStructs.AccountIdNameRole{
+				Id:        roleOutput.AccountId,
+				Name:      accountOutput.AccountName,
+				Role:      roleOutput.RoleName,
+				Overriden: &notOverriden,
+			}
+			roles = append(roles, account)
+		}
+	}
+	return roles, nil
+}
+
 func fetchAccountlist(ssoClient *sso.Client, token *string) ([]sharedStructs.AccountIdNameRole, error) {
 	accountPaginator := sso.NewListAccountsPaginator(ssoClient, &sso.ListAccountsInput{
 		AccessToken: token,
 	})
-	var accountList []sharedStructs.AccountIdNameRole
 
+	var allAccounts []ssoTypes.AccountInfo
 	for accountPaginator.HasMorePages() {
 		sSOOutput, errPaginatorError := accountPaginator.NextPage(context.TODO())
 		if errPaginatorError != nil {
-			return accountList, errPaginatorError
+			return nil, errPaginatorError
 		}
+		allAccounts = append(allAccounts, sSOOutput.AccountList...)
+	}
 
-		for _, accountOutput := range sSOOutput.AccountList {
-			rolePaginator := sso.NewListAccountRolesPaginator(ssoClient, &sso.ListAccountRolesInput{
-				AccessToken: token,
-				AccountId:   accountOutput.AccountId,
-			})
-			for rolePaginator.HasMorePages() {
-				roleListOutput, roleListerr := rolePaginator.NextPage(context.TODO())
-				if roleListerr != nil {
-					return accountList, roleListerr
+	if len(allAccounts) == 0 {
+		return nil, nil
+	}
+
+	maxWorkers := runtime.NumCPU()
+	if maxWorkers < 2 {
+		maxWorkers = 2
+	}
+	if maxWorkers > 8 {
+		maxWorkers = 8
+	}
+
+	accountCh := make(chan ssoTypes.AccountInfo, len(allAccounts))
+	for _, accountOutput := range allAccounts {
+		accountCh <- accountOutput
+	}
+	close(accountCh)
+
+	var (
+		mu          sync.Mutex
+		accountList []sharedStructs.AccountIdNameRole
+		firstErr    error
+	)
+
+	var wg sync.WaitGroup
+	for i := 0; i < maxWorkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for accountOutput := range accountCh {
+				roles, err := fetchRolesForAccount(ssoClient, token, accountOutput)
+				if err != nil {
+					mu.Lock()
+					if firstErr == nil {
+						firstErr = err
+					}
+					mu.Unlock()
+					return
 				}
-				for _, roleOutput := range roleListOutput.RoleList {
-					var notOverriden = false
-					account := sharedStructs.AccountIdNameRole{Id: roleOutput.AccountId, Name: accountOutput.AccountName, Role: roleOutput.RoleName, Overriden: &notOverriden}
-					accountList = append(accountList, account)
-				}
+
+				mu.Lock()
+				accountList = append(accountList, roles...)
+				mu.Unlock()
 			}
-		}
+		}()
+	}
+
+	wg.Wait()
+	if firstErr != nil {
+		return accountList, firstErr
 	}
 	return accountList, nil
 }
