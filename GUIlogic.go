@@ -7,7 +7,6 @@ import (
 	"context"
 	"errors"
 	"log"
-	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -222,6 +221,24 @@ func getAccountInfo(SSOSettings sharedStructs.SSOSettingsObject, accountInfo sha
 }
 
 func fetchRolesForAccount(ssoClient *sso.Client, token *string, accountOutput ssoTypes.AccountInfo) ([]sharedStructs.AccountIdNameRole, error) {
+	const maxAttempts = 4
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		roles, err := fetchRolesForAccountOnce(ssoClient, token, accountOutput)
+		if err == nil || !isRetryableRoleListError(err) || attempt == maxAttempts-1 {
+			return roles, err
+		}
+
+		delay := time.Second << attempt
+		log.Printf("ListAccountRoles for account %s failed (attempt %d/%d); retrying in %s: %v",
+			aws.ToString(accountOutput.AccountId), attempt+1, maxAttempts, delay, err)
+		time.Sleep(delay)
+	}
+
+	return nil, errors.New("ListAccountRoles failed after retries")
+}
+
+func fetchRolesForAccountOnce(ssoClient *sso.Client, token *string, accountOutput ssoTypes.AccountInfo) ([]sharedStructs.AccountIdNameRole, error) {
 	rolePaginator := sso.NewListAccountRolesPaginator(ssoClient, &sso.ListAccountRolesInput{
 		AccessToken: token,
 		AccountId:   accountOutput.AccountId,
@@ -247,6 +264,24 @@ func fetchRolesForAccount(ssoClient *sso.Client, token *string, accountOutput ss
 	return roles, nil
 }
 
+func isRetryableRoleListError(err error) bool {
+	errText := strings.ToLower(err.Error())
+	for _, marker := range []string{
+		"throttl",
+		"too many request",
+		"request limit",
+		"slow down",
+		"service unavailable",
+		"internal server error",
+		"exceeded maximum number of attempts",
+	} {
+		if strings.Contains(errText, marker) {
+			return true
+		}
+	}
+	return false
+}
+
 func fetchAccountlist(ssoClient *sso.Client, token *string) ([]sharedStructs.AccountIdNameRole, error) {
 	accountPaginator := sso.NewListAccountsPaginator(ssoClient, &sso.ListAccountsInput{
 		AccessToken: token,
@@ -265,13 +300,7 @@ func fetchAccountlist(ssoClient *sso.Client, token *string) ([]sharedStructs.Acc
 		return nil, nil
 	}
 
-	maxWorkers := runtime.NumCPU()
-	if maxWorkers < 2 {
-		maxWorkers = 2
-	}
-	if maxWorkers > 8 {
-		maxWorkers = 8
-	}
+	const maxWorkers = 3
 
 	accountCh := make(chan ssoTypes.AccountInfo, len(allAccounts))
 	for _, accountOutput := range allAccounts {
